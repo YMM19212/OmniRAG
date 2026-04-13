@@ -43,7 +43,7 @@ cp .env.example .env
 
 同时保留了对 `JINA_API_KEY` 的兼容回退支持。
 
-### 5. 如果你使用 Docker 模式，再启动 Milvus
+### 5. 如果使用 Docker 启动 Milvus
 
 推荐用于远程 / standalone Milvus：
 
