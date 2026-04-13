@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import ComponentCard from "../../components/common/ComponentCard";
 import Button from "../../components/ui/button/Button";
@@ -9,10 +9,14 @@ import type { KBConfig } from "../../types/omnirag";
 import { useI18n } from "../../context/I18nContext";
 
 export default function SettingsPage() {
-  const { status, config, stats, setConfig, initialize, loading } = useOmniRAG();
+  const { status, config, stats, initialize, loading } = useOmniRAG();
   const { t } = useI18n();
   const [form, setForm] = useState<KBConfig>(config);
   const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setForm(config);
+  }, [config]);
 
   const update = <K extends keyof KBConfig>(key: K, value: KBConfig[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -22,7 +26,6 @@ export default function SettingsPage() {
     setMessage(null);
     try {
       await initialize(form);
-      setConfig(form);
       setMessage(t("settings.readyMessage"));
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Initialization failed");
@@ -62,7 +65,7 @@ export default function SettingsPage() {
               <label className="space-y-2">
                 <span className="text-sm text-gray-700 dark:text-gray-300">{t("settings.milvusHost")}</span>
                 <input
-                  value={form.milvus_host}
+                  value={form.milvus_host ?? ""}
                   onChange={(e) => update("milvus_host", e.target.value)}
                   className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900"
                 />
@@ -71,8 +74,8 @@ export default function SettingsPage() {
                 <span className="text-sm text-gray-700 dark:text-gray-300">{t("settings.milvusPort")}</span>
                 <input
                   type="number"
-                  value={form.milvus_port}
-                  onChange={(e) => update("milvus_port", Number(e.target.value))}
+                  value={form.milvus_port ?? ""}
+                  onChange={(e) => update("milvus_port", e.target.value === "" ? null : Number(e.target.value))}
                   className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900"
                 />
               </label>

@@ -29,9 +29,23 @@ npm install
 cd ..
 ```
 
-### 4. Start Milvus
+### 4. Create a `.env` file
 
-Recommended: Docker-based Milvus standalone.
+```bash
+cp .env.example .env
+```
+
+Common options:
+
+- Docker Milvus: keep `OMNIRAG_MILVUS_URI=` empty and use `OMNIRAG_MILVUS_HOST` / `OMNIRAG_MILVUS_PORT`
+- Milvus Lite: set `OMNIRAG_MILVUS_URI=./data/multimodal_kb.db`
+- Jina or compatible embedding service: set `OMNIRAG_EMBEDDING_API_URL`, `OMNIRAG_EMBEDDING_MODEL_NAME`, and `OMNIRAG_EMBEDDING_API_KEY`
+
+`JINA_API_KEY` is still supported as a fallback for compatibility.
+
+### 5. Start Milvus if you use Docker mode
+
+Recommended for remote / standalone Milvus:
 
 ```bash
 cd infra/milvus
@@ -44,21 +58,7 @@ Milvus will be exposed on:
 - gRPC: `127.0.0.1:19530`
 - health/admin: `127.0.0.1:9091`
 
-### 5. Configure your Jina API key
-
-Windows PowerShell:
-
-```powershell
-$env:JINA_API_KEY="your_jina_api_key_here"
-```
-
-Windows CMD:
-
-```bat
-set JINA_API_KEY=your_jina_api_key_here
-```
-
-You can also enter the key from the `Connection & Settings` page in the dashboard.
+If you use Milvus Lite through `OMNIRAG_MILVUS_URI`, skip this step.
 
 ### 6. Start the API
 
@@ -165,7 +165,7 @@ Use the following combination for the most stable setup:
 
 - React dashboard
 - FastAPI backend
-- Docker Milvus standalone
+- Docker Milvus standalone configured through `.env`
 
 ### Streamlit fallback
 
@@ -177,15 +177,43 @@ streamlit run app.py --server.address 127.0.0.1 --server.port 10188
 
 ## Configuration Notes
 
+### Environment-based configuration
+
+OmniRAG now loads runtime defaults from the project-root `.env` file. The backend, Streamlit UI, and dashboard initialization form all read from the same configuration source.
+
+Create the file with:
+
+```bash
+cp .env.example .env
+```
+
+Key variables:
+
+- `OMNIRAG_EMBEDDING_API_URL`
+- `OMNIRAG_EMBEDDING_MODEL_NAME`
+- `OMNIRAG_EMBEDDING_API_KEY` or `JINA_API_KEY`
+- `OMNIRAG_MILVUS_URI`
+- `OMNIRAG_MILVUS_HOST`
+- `OMNIRAG_MILVUS_PORT`
+- `OMNIRAG_COLLECTION_NAME`
+- `OMNIRAG_VIDEO_SAMPLE_FRAMES`
+- `OMNIRAG_MAX_CONCURRENT_EMBEDS`
+- `OMNIRAG_ENABLE_DEDUPLICATION`
+- `OMNIRAG_DEDUP_MODE`
+
 ### Milvus Lite vs Docker Milvus
 
-OmniRAG supports a local database path through `pymilvus[milvus_lite]`, but platform compatibility varies.
+OmniRAG supports both Milvus Lite and remote Milvus.
 
-On some Windows and Python combinations, `milvus-lite` is not available as an installable package. In that case, use Docker Milvus standalone and configure:
+Use Milvus Lite:
 
-- `milvus_uri = null`
-- `milvus_host = 127.0.0.1`
-- `milvus_port = 19530`
+- `OMNIRAG_MILVUS_URI=./data/multimodal_kb.db`
+
+Use Docker / remote Milvus:
+
+- `OMNIRAG_MILVUS_URI=`
+- `OMNIRAG_MILVUS_HOST=127.0.0.1`
+- `OMNIRAG_MILVUS_PORT=19530`
 
 ### Default collection
 

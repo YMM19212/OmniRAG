@@ -61,12 +61,14 @@ export function OmniRAGProvider({ children }: { children: ReactNode }) {
 
   const refreshStatus = async () => {
     try {
-      const nextStatus = await kbApi.getStatus();
+      const [nextStatus, nextConfig] = await Promise.all([kbApi.getStatus(), kbApi.getConfig()]);
       setStatus(nextStatus);
+      setConfig((current) => ({ ...current, ...nextConfig }));
       if (nextStatus.ready) {
-        const [nextConfig, nextStats] = await Promise.all([kbApi.getConfig(), kbApi.getStats()]);
-        setConfig((current) => ({ ...current, ...nextConfig }));
+        const nextStats = await kbApi.getStats();
         setStats(nextStats);
+      } else {
+        setStats(null);
       }
       setError(null);
     } catch (err) {
@@ -94,7 +96,7 @@ export function OmniRAGProvider({ children }: { children: ReactNode }) {
     });
     try {
       const data = await kbApi.initialize(nextConfig);
-      setConfig(nextConfig);
+      setConfig((current) => ({ ...current, ...data.config }));
       setStatus(data.status);
       setStats(data.stats);
       setError(null);

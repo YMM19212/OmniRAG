@@ -9,8 +9,8 @@ export interface ApiResponse<T> {
 
 export interface KBConfig {
   milvus_uri?: string | null;
-  milvus_host: string;
-  milvus_port: number;
+  milvus_host?: string | null;
+  milvus_port?: number | null;
   collection_name: string;
   embedding_api_url: string;
   model_name: string;

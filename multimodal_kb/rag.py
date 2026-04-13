@@ -200,30 +200,37 @@ class AsyncMultimodalRAGSystem:
 
 
 async def create_kb_async(
-    milvus_uri: str = "./data/multimodal_kb.db",
-    milvus_host: str = "localhost",
-    embedding_url: str = "https://api.jina.ai/v1/embeddings",
-    collection_name: str = "multimodal_kb",
-    video_sample_frames: int = 8,
-    max_concurrent_embeds: int = 4,
-    enable_deduplication: bool = True,
-    dedup_mode: str = "semantic",
-    api_key: str = "",
-    model_name: str = "jina-embeddings-v4",
+    milvus_uri: Optional[str] = None,
+    milvus_host: Optional[str] = None,
+    embedding_url: Optional[str] = None,
+    collection_name: Optional[str] = None,
+    video_sample_frames: Optional[int] = None,
+    max_concurrent_embeds: Optional[int] = None,
+    enable_deduplication: Optional[bool] = None,
+    dedup_mode: Optional[str] = None,
+    api_key: Optional[str] = None,
+    model_name: Optional[str] = None,
 ) -> AsyncMultimodalRAGSystem:
+    default_config = MultimodalConfig()
     config = MultimodalConfig(
-        milvus_uri=milvus_uri,
-        milvus_host=milvus_host,
-        embedding_api_url=embedding_url,
-        model_name=model_name,
-        api_key=api_key,
-        collection_name=collection_name,
-        vector_dim=2048,
-        video_sample_frames=video_sample_frames,
-        max_concurrent_embeds=max_concurrent_embeds,
-        enable_deduplication=enable_deduplication,
-        dedup_mode=dedup_mode,
-        similarity_threshold=0.75 if dedup_mode == "semantic" else 1.0,
+        milvus_uri=default_config.milvus_uri if milvus_uri is None else (milvus_uri or None),
+        milvus_host=default_config.milvus_host if milvus_host is None else (milvus_host or None),
+        embedding_api_url=embedding_url or default_config.embedding_api_url,
+        model_name=model_name or default_config.model_name,
+        api_key=default_config.api_key if api_key is None else api_key,
+        collection_name=collection_name or default_config.collection_name,
+        vector_dim=default_config.vector_dim,
+        video_sample_frames=video_sample_frames or default_config.video_sample_frames,
+        max_concurrent_embeds=max_concurrent_embeds or default_config.max_concurrent_embeds,
+        enable_deduplication=(
+            default_config.enable_deduplication if enable_deduplication is None else enable_deduplication
+        ),
+        dedup_mode=dedup_mode or default_config.dedup_mode,
+        similarity_threshold=(
+            default_config.similarity_threshold
+            if (dedup_mode or default_config.dedup_mode) == "semantic"
+            else 1.0
+        ),
     )
     rag = AsyncMultimodalRAGSystem(config)
     await rag.initialize()

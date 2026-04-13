@@ -81,10 +81,8 @@ class StreamlitKBClient:
         return self._rag is not None
 
     def get_config_dict(self) -> Dict[str, Any]:
-        if not self._config:
-            return {}
-
-        data = asdict(self._config)
+        config = self._config or MultimodalConfig()
+        data = asdict(config)
         api_key = data.get("api_key") or ""
         data["api_key"] = ""
         data["api_key_configured"] = bool(api_key)

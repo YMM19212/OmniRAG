@@ -91,16 +91,31 @@ def collect_selected_ids(results: List[Dict[str, Any]], prefix: str) -> List[str
 def sidebar_config():
     st.sidebar.title("连接配置")
     default_config = MultimodalConfig()
-    milvus_uri = st.sidebar.text_input("Milvus URI / DB Path", value=default_config.milvus_uri)
-    host = st.sidebar.text_input("Milvus Host", value=default_config.milvus_host)
-    port = st.sidebar.number_input("Milvus Port", min_value=1, max_value=65535, value=default_config.milvus_port)
+    milvus_uri = st.sidebar.text_input("Milvus URI / DB Path", value=default_config.milvus_uri or "")
+    host = st.sidebar.text_input("Milvus Host", value=default_config.milvus_host or "")
+    port = st.sidebar.number_input(
+        "Milvus Port",
+        min_value=1,
+        max_value=65535,
+        value=default_config.milvus_port or 19530,
+    )
     collection = st.sidebar.text_input("Collection Name", value=default_config.collection_name)
     embedding_url = st.sidebar.text_input("Embedding URL", value=default_config.embedding_api_url)
     model_name = st.sidebar.text_input("Embedding Model", value=default_config.model_name)
     api_key = st.sidebar.text_input("Embedding API Key", value=default_config.api_key, type="password")
-    max_concurrent_embeds = st.sidebar.slider("最大并发嵌入数", min_value=1, max_value=16, value=default_config.max_concurrent_embeds)
+    max_concurrent_embeds = st.sidebar.slider(
+        "最大并发嵌入数",
+        min_value=1,
+        max_value=max(16, default_config.max_concurrent_embeds),
+        value=default_config.max_concurrent_embeds,
+    )
     enable_dedup = st.sidebar.checkbox("启用去重", value=default_config.enable_deduplication)
-    dedup_mode = st.sidebar.selectbox("去重模式", options=["semantic", "strict"], index=0)
+    dedup_options = ["semantic", "strict"]
+    dedup_mode = st.sidebar.selectbox(
+        "去重模式",
+        options=dedup_options,
+        index=dedup_options.index(default_config.dedup_mode) if default_config.dedup_mode in dedup_options else 0,
+    )
 
     if st.sidebar.button("初始化 / 重连", use_container_width=True):
         client = get_client()
@@ -108,12 +123,12 @@ def sidebar_config():
         try:
             config = MultimodalConfig(
                 milvus_uri=milvus_uri.strip() or None,
-                milvus_host=host,
+                milvus_host=host.strip() or default_config.milvus_host,
                 milvus_port=int(port),
-                collection_name=collection,
-                embedding_api_url=embedding_url,
+                collection_name=collection.strip() or default_config.collection_name,
+                embedding_api_url=embedding_url.strip() or default_config.embedding_api_url,
                 model_name=model_name.strip() or default_config.model_name,
-                api_key=api_key.strip(),
+                api_key=api_key.strip() or default_config.api_key,
                 max_concurrent_embeds=int(max_concurrent_embeds),
                 enable_deduplication=enable_dedup,
                 dedup_mode=dedup_mode,

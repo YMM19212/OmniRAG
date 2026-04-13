@@ -45,19 +45,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+DEFAULT_CONFIG = MultimodalConfig()
+
+
+def clean_optional_str(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    stripped = value.strip()
+    return stripped or None
+
+
+def clean_or_default(value: Optional[str], fallback: str) -> str:
+    if value is None:
+        return fallback
+    stripped = value.strip()
+    return stripped or fallback
+
 
 class InitializeRequest(BaseModel):
-    milvus_uri: Optional[str] = "./data/multimodal_kb.db"
-    milvus_host: str = "localhost"
-    milvus_port: int = 19530
-    collection_name: str = "multimodal_kb"
-    embedding_api_url: str = "https://api.jina.ai/v1/embeddings"
-    model_name: str = "jina-embeddings-v4"
+    milvus_uri: Optional[str] = Field(default_factory=lambda: DEFAULT_CONFIG.milvus_uri)
+    milvus_host: Optional[str] = Field(default_factory=lambda: DEFAULT_CONFIG.milvus_host)
+    milvus_port: Optional[int] = Field(default_factory=lambda: DEFAULT_CONFIG.milvus_port)
+    collection_name: str = Field(default_factory=lambda: DEFAULT_CONFIG.collection_name)
+    embedding_api_url: str = Field(default_factory=lambda: DEFAULT_CONFIG.embedding_api_url)
+    model_name: str = Field(default_factory=lambda: DEFAULT_CONFIG.model_name)
     api_key: str = ""
-    max_concurrent_embeds: int = 8
-    enable_deduplication: bool = True
-    dedup_mode: str = "semantic"
-    similarity_threshold: float = 0.95
+    max_concurrent_embeds: int = Field(default_factory=lambda: DEFAULT_CONFIG.max_concurrent_embeds)
+    enable_deduplication: bool = Field(default_factory=lambda: DEFAULT_CONFIG.enable_deduplication)
+    dedup_mode: str = Field(default_factory=lambda: DEFAULT_CONFIG.dedup_mode)
+    similarity_threshold: float = Field(default_factory=lambda: DEFAULT_CONFIG.similarity_threshold)
 
 
 class SearchRequest(BaseModel):
@@ -118,14 +134,15 @@ def get_stats():
 def initialize(payload: InitializeRequest):
     client = get_client()
     try:
+        default_config = MultimodalConfig()
         config = MultimodalConfig(
-            milvus_uri=payload.milvus_uri.strip() if payload.milvus_uri else None,
-            milvus_host=payload.milvus_host,
-            milvus_port=payload.milvus_port,
-            collection_name=payload.collection_name,
-            embedding_api_url=payload.embedding_api_url,
-            model_name=payload.model_name,
-            api_key=payload.api_key.strip(),
+            milvus_uri=clean_optional_str(payload.milvus_uri),
+            milvus_host=clean_optional_str(payload.milvus_host) or default_config.milvus_host,
+            milvus_port=payload.milvus_port if payload.milvus_port is not None else default_config.milvus_port,
+            collection_name=clean_or_default(payload.collection_name, default_config.collection_name),
+            embedding_api_url=clean_or_default(payload.embedding_api_url, default_config.embedding_api_url),
+            model_name=clean_or_default(payload.model_name, default_config.model_name),
+            api_key=clean_or_default(payload.api_key, default_config.api_key),
             max_concurrent_embeds=payload.max_concurrent_embeds,
             enable_deduplication=payload.enable_deduplication,
             dedup_mode=payload.dedup_mode,

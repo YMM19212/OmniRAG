@@ -10,3 +10,4 @@ pymilvus[milvus_lite]
 fastapi
 uvicorn[standard]
 python-multipart
+python-dotenv

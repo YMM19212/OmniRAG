@@ -29,9 +29,23 @@ npm install
 cd ..
 ```
 
-### 4. 启动 Milvus
+### 4. 创建 `.env` 配置文件
 
-推荐方式：使用 Docker 启动 Milvus standalone。
+```bash
+cp .env.example .env
+```
+
+常见配置方式：
+
+- Docker 版 Milvus：保持 `OMNIRAG_MILVUS_URI=` 为空，并设置 `OMNIRAG_MILVUS_HOST` / `OMNIRAG_MILVUS_PORT`
+- Milvus Lite：设置 `OMNIRAG_MILVUS_URI=./data/multimodal_kb.db`
+- Jina 或兼容 embedding 服务：设置 `OMNIRAG_EMBEDDING_API_URL`、`OMNIRAG_EMBEDDING_MODEL_NAME`、`OMNIRAG_EMBEDDING_API_KEY`
+
+同时保留了对 `JINA_API_KEY` 的兼容回退支持。
+
+### 5. 如果你使用 Docker 模式，再启动 Milvus
+
+推荐用于远程 / standalone Milvus：
 
 ```bash
 cd infra/milvus
@@ -44,21 +58,7 @@ cd ../..
 - gRPC: `127.0.0.1:19530`
 - 健康检查 / 管理端口: `127.0.0.1:9091`
 
-### 5. 配置 Jina API Key
-
-Windows PowerShell:
-
-```powershell
-$env:JINA_API_KEY="your_jina_api_key_here"
-```
-
-Windows CMD:
-
-```bat
-set JINA_API_KEY=your_jina_api_key_here
-```
-
-你也可以在前端控制台的 `Connection & Settings` 页面中直接填写该密钥。
+如果你通过 `OMNIRAG_MILVUS_URI` 使用 Milvus Lite，可以跳过这一步。
 
 ### 6. 启动 API 服务
 
@@ -165,7 +165,7 @@ requirements.txt
 
 - React 控制台
 - FastAPI 后端
-- Docker 版 Milvus standalone
+- 通过 `.env` 配置的 Docker 版 Milvus standalone
 
 ### Streamlit 兼容模式
 
@@ -177,15 +177,43 @@ streamlit run app.py --server.address 127.0.0.1 --server.port 10188
 
 ## 配置说明
 
+### 基于环境变量的配置
+
+OmniRAG 现在会从项目根目录的 `.env` 读取运行时默认配置。后端、Streamlit 界面和 dashboard 初始化表单都会使用同一套配置源。
+
+创建方式：
+
+```bash
+cp .env.example .env
+```
+
+关键变量包括：
+
+- `OMNIRAG_EMBEDDING_API_URL`
+- `OMNIRAG_EMBEDDING_MODEL_NAME`
+- `OMNIRAG_EMBEDDING_API_KEY` 或 `JINA_API_KEY`
+- `OMNIRAG_MILVUS_URI`
+- `OMNIRAG_MILVUS_HOST`
+- `OMNIRAG_MILVUS_PORT`
+- `OMNIRAG_COLLECTION_NAME`
+- `OMNIRAG_VIDEO_SAMPLE_FRAMES`
+- `OMNIRAG_MAX_CONCURRENT_EMBEDS`
+- `OMNIRAG_ENABLE_DEDUPLICATION`
+- `OMNIRAG_DEDUP_MODE`
+
 ### Milvus Lite 与 Docker Milvus
 
-OmniRAG 支持通过 `pymilvus[milvus_lite]` 使用本地数据库路径，但不同平台的兼容性并不完全一致。
+OmniRAG 同时支持 Milvus Lite 和远程 Milvus。
 
-在某些 Windows 与 Python 版本组合下，`milvus-lite` 可能无法直接安装。这种情况下建议使用 Docker 版 Milvus standalone，并配置：
+使用 Milvus Lite：
 
-- `milvus_uri = null`
-- `milvus_host = 127.0.0.1`
-- `milvus_port = 19530`
+- `OMNIRAG_MILVUS_URI=./data/multimodal_kb.db`
+
+使用 Docker / 远程 Milvus：
+
+- `OMNIRAG_MILVUS_URI=`
+- `OMNIRAG_MILVUS_HOST=127.0.0.1`
+- `OMNIRAG_MILVUS_PORT=19530`
 
 ### 默认集合名
 
