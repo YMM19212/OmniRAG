@@ -1,0 +1,70 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+.venv/
+venv/
+env/
+
+# Local runtime / logs
+*.log
+api.log
+api.err.log
+streamlit.log
+streamlit.err.log
+vite.log
+vite.err.log
+
+# Local temp / generated
+.tmp_milvus_probe/
+omnirag_init.json
+omnirag_init_remote.json
+
+# Data / local databases
+data/*.db
+data/**/*.db
+data/*.lock
+data/**/*.lock
+data/.milvus_lite_runtime/
+dataset/*.parquet
+data/eval_images/
+data/dedup_eval_text_only/
+data/dedup_eval_text_smoke_fix/
+data/dedup_eval_text_sweep/
+data/dedup_eval_text_sweep_fix/
+data/dedup_eval_text_sweep_fix_v2/
+
+# Upload / cache artifacts
+uploads/
+tmp/
+temp/
+
+# Node / frontend
+dashboard/node_modules/
+dashboard/dist/
+dashboard/.vite/
+dashboard/node_modules/.cache/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Docker / infra local volumes
+infra/milvus/volumes/
+
+# Archive leftovers from macOS extraction
+._*

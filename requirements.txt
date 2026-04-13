@@ -1,0 +1,12 @@
+setuptools<81
+streamlit
+aiohttp
+opencv-python-headless
+numpy
+Pillow
+pandas
+pyarrow
+pymilvus[milvus_lite]
+fastapi
+uvicorn[standard]
+python-multipart
