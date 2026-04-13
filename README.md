@@ -1,94 +1,17 @@
 # OmniRAG
 
-**OmniRAG** is a multimodal retrieval workspace for building, operating, and evaluating knowledge bases over **text, images, and video**.
+[English](./README.md) | [简体中文](./README.zh-CN.md)
 
-It combines a modern web console, a Python API layer, and a Milvus-backed storage engine into a practical local-first system for multimodal ingestion, semantic retrieval, hybrid search, and record management.
+OmniRAG is a professional multimodal retrieval workspace for building, operating, and evaluating knowledge bases over text, images, and video.
 
-## Why OmniRAG?
-
-Most RAG demos stop at a single notebook or a basic chat UI. OmniRAG is designed as an **operational surface**:
-
-- A professional dashboard for configuration, ingestion, retrieval, and record governance
-- A Python service layer that exposes reusable APIs instead of embedding logic inside the UI
-- Support for **text-only**, **image + text**, and **video + text** indexing workflows
-- Both **semantic search** and **hybrid cross-modal search**
-- Milvus-backed storage with deduplication support
-
-## Features
-
-- **Professional web console**
-  - Overview dashboard
-  - Connection and runtime configuration
-  - Single-item ingestion
-  - Batch ingestion
-  - Semantic search
-  - Hybrid search
-  - Record review and deletion
-
-- **Multimodal knowledge ingestion**
-  - Text
-  - Images
-  - Videos
-  - Metadata payloads
-
-- **Retrieval workflows**
-  - Text-to-text
-  - Text-to-image
-  - Image-based retrieval
-  - Video-based retrieval
-  - Hybrid search across modalities
-
-- **Operational capabilities**
-  - Collection stats
-  - Runtime config inspection
-  - Selection-based deletion
-  - Duplicate detection
-  - Shared result cache across retrieval pages
-
-- **Developer-friendly architecture**
-  - React + Vite frontend
-  - FastAPI backend
-  - `pymilvus` integration
-  - Streamlit fallback UI retained for compatibility
-
-## Architecture
-
-```text
-OmniRAG
-├─ dashboard/          # React + Vite + Tailwind frontend
-├─ api_server.py       # FastAPI service layer
-├─ multimodal_kb/      # Core multimodal RAG logic
-├─ ui_backend.py       # Synchronous wrapper / runtime bridge
-├─ app.py              # Legacy Streamlit UI
-└─ infra/milvus/       # Docker Compose for Milvus standalone
-```
-
-### Core stack
-
-- **Frontend:** React 19, TypeScript, Tailwind CSS, Vite
-- **Backend:** FastAPI
-- **Vector store:** Milvus
-- **Embeddings:** Jina `jina-embeddings-v4`
-- **Media processing:** OpenCV, Pillow, NumPy
-
-## Project Status
-
-OmniRAG is currently an **active local development project** focused on a production-style operator experience for multimodal RAG.
-
-The current implementation already supports:
-
-- API-driven initialization
-- Real Milvus-backed collections
-- Real document ingestion
-- Real semantic and hybrid retrieval
-- Dashboard-based operations
+It combines a modern web console, a Python API layer, and a Milvus-backed retrieval engine into a local-first system for multimodal ingestion, semantic search, hybrid search, and record management.
 
 ## Quick Start
 
 ### 1. Clone the repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/YMM19212/OmniRAG.git
 cd OmniRAG
 ```
 
@@ -108,7 +31,7 @@ cd ..
 
 ### 4. Start Milvus
 
-#### Recommended: Docker-based Milvus standalone
+Recommended: Docker-based Milvus standalone.
 
 ```bash
 cd infra/milvus
@@ -119,15 +42,31 @@ cd ../..
 Milvus will be exposed on:
 
 - gRPC: `127.0.0.1:19530`
-- health / admin: `127.0.0.1:9091`
+- health/admin: `127.0.0.1:9091`
 
-### 5. Start the API
+### 5. Configure your Jina API key
+
+Windows PowerShell:
+
+```powershell
+$env:JINA_API_KEY="your_jina_api_key_here"
+```
+
+Windows CMD:
+
+```bat
+set JINA_API_KEY=your_jina_api_key_here
+```
+
+You can also enter the key from the `Connection & Settings` page in the dashboard.
+
+### 6. Start the API
 
 ```bash
 uvicorn api_server:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-### 6. Start the frontend
+### 7. Start the frontend
 
 ```bash
 cd dashboard
@@ -138,49 +77,63 @@ Open:
 
 - Frontend: `http://127.0.0.1:5173`
 - API: `http://127.0.0.1:8000`
+- Health check: `http://127.0.0.1:8000/api/health`
 
-## Authentication / API Keys
+## Why OmniRAG
 
-OmniRAG uses Jina embeddings by default.
+Most multimodal RAG demos stop at a notebook or a simple chat interface. OmniRAG is designed as an operational surface:
 
-You can provide the key in either of the following ways:
+- A professional dashboard for configuration, ingestion, retrieval, and record governance
+- A dedicated FastAPI service layer instead of UI-bound runtime logic
+- Support for text-only, image-plus-text, and video-plus-text indexing workflows
+- Both semantic search and hybrid cross-modal retrieval
+- Milvus-backed storage with duplicate detection support
 
-- set `JINA_API_KEY` in your environment
-- enter the key in the **Connection & Settings** page in the dashboard
+## Features
 
-Example:
+- Professional web console
+- English and Chinese language toggle
+- Single-item and batch ingestion
+- Text, image, and video retrieval workflows
+- Hybrid search across modalities
+- Runtime configuration and status inspection
+- Collection statistics and result management
+- Selection-based record deletion
+- Streamlit fallback retained for compatibility
 
-```bash
-set JINA_API_KEY=your_jina_api_key_here
+## Architecture
+
+```text
+OmniRAG
+|- dashboard/          React + Vite + Tailwind frontend
+|- api_server.py       FastAPI service layer
+|- multimodal_kb/      Core multimodal RAG logic
+|- ui_backend.py       Sync runtime bridge for UI/API
+|- app.py              Legacy Streamlit interface
+`- infra/milvus/       Docker Compose for Milvus standalone
 ```
 
-Without a valid embedding key, initialization or retrieval requests that depend on embeddings will fail.
+### Core stack
 
-## Running Modes
+- Frontend: React 19, TypeScript, Tailwind CSS, Vite
+- Backend: FastAPI
+- Vector store: Milvus
+- Embeddings: Jina `jina-embeddings-v4`
+- Media processing: OpenCV, Pillow, NumPy
 
-### Recommended mode
+## Project Structure
 
-Use:
-
-- **React dashboard** as the main UI
-- **FastAPI** as the runtime service
-- **Docker Milvus standalone** as the vector backend
-
-This is the most stable setup across platforms.
-
-### Streamlit fallback
-
-The repository still includes the original Streamlit UI:
-
-```bash
-streamlit run app.py --server.address 127.0.0.1 --server.port 10188
+```text
+dashboard/
+multimodal_kb/
+infra/milvus/
+api_server.py
+ui_backend.py
+app.py
+requirements.txt
 ```
-
-This is kept for compatibility and debugging, but it is **not the primary interface** anymore.
 
 ## API Overview
-
-The FastAPI server exposes the following endpoints:
 
 ### Knowledge base lifecycle
 
@@ -204,45 +157,37 @@ The FastAPI server exposes the following endpoints:
 
 - `GET /api/health`
 
-## Frontend Development
+## Running Modes
 
-The frontend lives in [`dashboard/`](./dashboard).
+### Recommended mode
 
-### Dev server
+Use the following combination for the most stable setup:
 
-```bash
-cd dashboard
-npm run dev
-```
+- React dashboard
+- FastAPI backend
+- Docker Milvus standalone
 
-By default, the Vite dev server proxies `/api` to:
+### Streamlit fallback
 
-```text
-http://127.0.0.1:8000
-```
-
-### Production build
+The original Streamlit interface is still available for compatibility and debugging:
 
 ```bash
-cd dashboard
-npm run build
+streamlit run app.py --server.address 127.0.0.1 --server.port 10188
 ```
 
 ## Configuration Notes
 
-### Milvus Lite vs remote Milvus
+### Milvus Lite vs Docker Milvus
 
-OmniRAG supports a local database path through `pymilvus[milvus_lite]`, but in practice **platform compatibility varies**.
+OmniRAG supports a local database path through `pymilvus[milvus_lite]`, but platform compatibility varies.
 
-For example, on some Windows + Python 3.13 environments, `milvus-lite` may not be available as an installable package. In those cases, use **Docker Milvus standalone** and configure:
+On some Windows and Python combinations, `milvus-lite` is not available as an installable package. In that case, use Docker Milvus standalone and configure:
 
 - `milvus_uri = null`
 - `milvus_host = 127.0.0.1`
 - `milvus_port = 19530`
 
 ### Default collection
-
-The default collection name is:
 
 ```text
 multimodal_kb
@@ -254,48 +199,39 @@ multimodal_kb
 jina-embeddings-v4
 ```
 
-## Current UX Highlights
+## Development
 
-- Professional dashboard UI replacing the original Streamlit-only surface
-- English / Chinese language toggle in the console
-- Shared result review flow across retrieval pages
-- Runtime configuration panel with real backend integration
-- Removal of template watermarks / promo leftovers from the original dashboard template
+### Frontend
+
+```bash
+cd dashboard
+npm run dev
+```
+
+The Vite dev server proxies `/api` to `http://127.0.0.1:8000`.
+
+### Production build
+
+```bash
+cd dashboard
+npm run build
+```
 
 ## Known Limitations
 
-- The current embedding integration depends on an external Jina API key
-- Milvus Lite is not equally available on all operating systems / Python versions
-- The legacy Streamlit app remains in the repository, but the main product surface is now the React dashboard
-- API key masking in config responses should be hardened further before wider distribution
+- Embedding requests depend on a valid external Jina API key
+- Milvus Lite is not equally available across all operating systems and Python versions
+- The current deployment flow is optimized for local development rather than packaged production release
 
 ## Roadmap
 
-- Better API key masking and secret handling
-- Improved upload progress and background task UX
+- Stronger secret handling and config protection
+- Better upload progress and long-running task feedback
 - Richer collection management
 - Evaluation tooling for retrieval quality
 - Better multimodal result previews
-- Optional single-binary or single-service deployment mode
-
-## Development Notes
-
-If you are working locally on Windows, the most reliable stack today is:
-
-1. Docker Milvus standalone
-2. FastAPI backend
-3. React dashboard
-
-That setup has already been validated in this repository.
+- Optional single-service deployment mode
 
 ## License
 
-This project currently does not define a final public license in the repository root.
-
-If you plan to publish OmniRAG openly on GitHub, add an explicit license file before release.
-
-## Acknowledgements
-
-OmniRAG uses a customized dashboard foundation and replaces its original branding and demo content with a retrieval-focused operator workflow.
-
-The current project direction is focused on building a **serious multimodal RAG workspace**, not a generic admin template.
+This project is released under the [MIT License](./LICENSE).
