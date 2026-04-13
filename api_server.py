@@ -1,9 +1,13 @@
 import json
+import mimetypes
 from contextlib import asynccontextmanager
+from pathlib import Path
+from tempfile import gettempdir
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, File, Form, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from multimodal_kb import MultimodalConfig
@@ -46,6 +50,8 @@ app.add_middleware(
 )
 
 DEFAULT_CONFIG = MultimodalConfig()
+PROJECT_ROOT = Path(__file__).resolve().parent
+UPLOAD_ROOT = Path(gettempdir()) / "multimodal_kb_ui"
 
 
 def clean_optional_str(value: Optional[str]) -> Optional[str]:
@@ -103,9 +109,35 @@ def parse_json_field(raw_value: Optional[str], default: Any) -> Any:
     return json.loads(raw_value)
 
 
+def resolve_media_path(raw_path: str) -> Path:
+    try:
+        resolved = Path(raw_path).expanduser().resolve(strict=True)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Media file not found.") from exc
+
+    if not resolved.is_file():
+        raise HTTPException(status_code=404, detail="Media file not found.")
+
+    allowed_roots = (
+        PROJECT_ROOT.resolve(),
+        UPLOAD_ROOT.resolve(),
+    )
+    if not any(root == resolved or root in resolved.parents for root in allowed_roots):
+        raise HTTPException(status_code=403, detail="Media path is outside allowed roots.")
+
+    return resolved
+
+
 @app.get("/api/health")
 def health():
     return ok({"service": "OmniRAG API"})
+
+
+@app.get("/api/media")
+def get_media(path: str = Query(..., min_length=1)):
+    media_path = resolve_media_path(path)
+    media_type, _ = mimetypes.guess_type(media_path.name)
+    return FileResponse(media_path, media_type=media_type or "application/octet-stream")
 
 
 @app.get("/api/kb/status")

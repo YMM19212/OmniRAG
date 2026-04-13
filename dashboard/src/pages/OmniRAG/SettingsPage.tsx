@@ -8,24 +8,59 @@ import { useOmniRAG } from "../../context/OmniRAGContext";
 import type { KBConfig } from "../../types/omnirag";
 import { useI18n } from "../../context/I18nContext";
 
+const DEFAULT_MILVUS_LITE_URI = "./data/multimodal_kb.db";
+const DEFAULT_MILVUS_HOST = "localhost";
+const DEFAULT_MILVUS_PORT = 19530;
+const baseInputClass =
+  "w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900";
+const disabledInputClass = "cursor-not-allowed opacity-50";
+
 export default function SettingsPage() {
   const { status, config, stats, initialize, loading } = useOmniRAG();
   const { t } = useI18n();
   const [form, setForm] = useState<KBConfig>(config);
+  const [useMilvusLite, setUseMilvusLite] = useState(Boolean(config.milvus_uri));
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setForm(config);
+    setUseMilvusLite(Boolean(config.milvus_uri));
   }, [config]);
 
   const update = <K extends keyof KBConfig>(key: K, value: KBConfig[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
   };
 
+  const handleMilvusLiteChange = (checked: boolean) => {
+    setUseMilvusLite(checked);
+    if (!checked) {
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      milvus_uri: current.milvus_uri || DEFAULT_MILVUS_LITE_URI,
+    }));
+  };
+
+  const submitConfig: KBConfig = useMilvusLite
+    ? {
+        ...form,
+        milvus_uri: form.milvus_uri?.trim() || DEFAULT_MILVUS_LITE_URI,
+        milvus_host: null,
+        milvus_port: null,
+      }
+    : {
+        ...form,
+        milvus_uri: null,
+        milvus_host: form.milvus_host?.trim() || DEFAULT_MILVUS_HOST,
+        milvus_port: form.milvus_port ?? DEFAULT_MILVUS_PORT,
+      };
+
   const handleSubmit = async () => {
     setMessage(null);
     try {
-      await initialize(form);
+      await initialize(submitConfig);
       setMessage(t("settings.readyMessage"));
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Initialization failed");
@@ -46,12 +81,22 @@ export default function SettingsPage() {
         <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
           <ComponentCard title={t("settings.runtime")} desc={t("settings.runtimeDesc")}>
             <div className="grid gap-4 md:grid-cols-2">
+              <label className="inline-flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300 md:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={useMilvusLite}
+                  onChange={(e) => handleMilvusLiteChange(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                />
+                <span>{t("settings.useMilvusLite")}</span>
+              </label>
               <label className="space-y-2">
                 <span className="text-sm text-gray-700 dark:text-gray-300">{t("settings.milvusUri")}</span>
                 <input
                   value={form.milvus_uri ?? ""}
                   onChange={(e) => update("milvus_uri", e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900"
+                  disabled={!useMilvusLite}
+                  className={`${baseInputClass} ${!useMilvusLite ? disabledInputClass : ""}`}
                 />
               </label>
               <label className="space-y-2">
@@ -59,7 +104,7 @@ export default function SettingsPage() {
                 <input
                   value={form.collection_name}
                   onChange={(e) => update("collection_name", e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900"
+                  className={baseInputClass}
                 />
               </label>
               <label className="space-y-2">
@@ -67,7 +112,8 @@ export default function SettingsPage() {
                 <input
                   value={form.milvus_host ?? ""}
                   onChange={(e) => update("milvus_host", e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900"
+                  disabled={useMilvusLite}
+                  className={`${baseInputClass} ${useMilvusLite ? disabledInputClass : ""}`}
                 />
               </label>
               <label className="space-y-2">
@@ -76,7 +122,8 @@ export default function SettingsPage() {
                   type="number"
                   value={form.milvus_port ?? ""}
                   onChange={(e) => update("milvus_port", e.target.value === "" ? null : Number(e.target.value))}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900"
+                  disabled={useMilvusLite}
+                  className={`${baseInputClass} ${useMilvusLite ? disabledInputClass : ""}`}
                 />
               </label>
               <label className="space-y-2">
@@ -84,7 +131,7 @@ export default function SettingsPage() {
                 <input
                   value={form.embedding_api_url}
                   onChange={(e) => update("embedding_api_url", e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900"
+                  className={baseInputClass}
                 />
               </label>
               <label className="space-y-2">
@@ -92,7 +139,7 @@ export default function SettingsPage() {
                 <input
                   value={form.model_name}
                   onChange={(e) => update("model_name", e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900"
+                  className={baseInputClass}
                 />
               </label>
               <label className="space-y-2 md:col-span-2">
@@ -101,7 +148,7 @@ export default function SettingsPage() {
                   type="password"
                   value={form.api_key}
                   onChange={(e) => update("api_key", e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900"
+                  className={baseInputClass}
                 />
               </label>
             </div>
@@ -113,7 +160,7 @@ export default function SettingsPage() {
                   type="number"
                   value={form.max_concurrent_embeds}
                   onChange={(e) => update("max_concurrent_embeds", Number(e.target.value))}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900"
+                  className={baseInputClass}
                 />
               </label>
               <label className="space-y-2">
@@ -121,7 +168,7 @@ export default function SettingsPage() {
                 <select
                   value={form.dedup_mode}
                   onChange={(e) => update("dedup_mode", e.target.value as KBConfig["dedup_mode"])}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900"
+                  className={baseInputClass}
                 >
                   <option value="semantic">semantic</option>
                   <option value="strict">strict</option>
@@ -136,7 +183,7 @@ export default function SettingsPage() {
                   max="1"
                   value={form.similarity_threshold}
                   onChange={(e) => update("similarity_threshold", Number(e.target.value))}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900"
+                  className={baseInputClass}
                 />
               </label>
             </div>
@@ -172,7 +219,7 @@ export default function SettingsPage() {
               <div className="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/70">
                 <p className="text-xs uppercase tracking-wide text-gray-400">{t("settings.configPayload")}</p>
                 <pre className="mt-3 overflow-x-auto whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
-                  {JSON.stringify(form, null, 2)}
+                  {JSON.stringify(submitConfig, null, 2)}
                 </pre>
               </div>
             </div>

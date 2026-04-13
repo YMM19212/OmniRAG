@@ -1,6 +1,8 @@
+import { useState } from "react";
 import Badge from "../ui/badge/Badge";
 import type { SearchResult } from "../../types/omnirag";
 import { useI18n } from "../../context/I18nContext";
+import { buildMediaUrl } from "../../services/api";
 
 function getSimilarity(distance?: number | null) {
   if (distance === null || distance === undefined) return null;
@@ -29,6 +31,8 @@ export default function ResultCard({
   const { t } = useI18n();
   const similarity = getSimilarity(result.distance);
   const preview = getPreview(result);
+  const [imageLoadFailed, setImageLoadFailed] = useState(false);
+  const imageUrl = !preview && !imageLoadFailed ? buildMediaUrl(result.image_path) : null;
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
@@ -36,11 +40,12 @@ export default function ResultCard({
         <div className="flex h-48 w-full items-center justify-center overflow-hidden rounded-2xl bg-gray-100 xl:w-72 dark:bg-gray-800">
           {preview ? (
             <img src={preview} alt={result.id} className="h-full w-full object-cover" />
-          ) : result.image_path ? (
+          ) : imageUrl ? (
             <img
-              src={result.image_path}
+              src={imageUrl}
               alt={result.id}
               className="h-full w-full object-cover"
+              onError={() => setImageLoadFailed(true)}
             />
           ) : (
             <div className="px-4 text-center text-sm text-gray-500 dark:text-gray-400">

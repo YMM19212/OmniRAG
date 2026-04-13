@@ -12,6 +12,11 @@ import type {
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/api";
 
+export function buildMediaUrl(path?: string | null): string | null {
+  if (!path) return null;
+  return `${API_BASE}/media?path=${encodeURIComponent(path)}`;
+}
+
 async function parseResponse<T>(response: Response): Promise<ApiResponse<T>> {
   const payload = (await response.json()) as ApiResponse<T>;
   if (!response.ok || !payload.success) {

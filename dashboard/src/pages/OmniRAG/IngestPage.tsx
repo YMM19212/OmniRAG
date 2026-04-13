@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import ComponentCard from "../../components/common/ComponentCard";
 import Button from "../../components/ui/button/Button";
@@ -10,7 +10,7 @@ import { useI18n } from "../../context/I18nContext";
 import { kbApi } from "../../services/api";
 
 export default function IngestPage() {
-  const { status, refreshStats } = useOmniRAG();
+  const { status, refreshStats, refreshStatus } = useOmniRAG();
   const { t } = useI18n();
   const [text, setText] = useState("");
   const [metadata, setMetadata] = useState("{}");
@@ -26,10 +26,33 @@ export default function IngestPage() {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    // Refresh once on page entry so stale ready state does not block imports.
+    void refreshStatus();
+  }, []);
+
+  const ensureReady = async () => {
+    const latestStatus = await kbApi.getStatus();
+    if (latestStatus.ready) {
+      await refreshStatus();
+      return true;
+    }
+
+    setFeedback(t("ingest.initRequired"));
+    await refreshStatus();
+    return false;
+  };
+
   const submitSingle = async () => {
     setLoading(true);
     setFeedback(null);
     try {
+      const ready = await ensureReady();
+      if (!ready) {
+        setLoading(false);
+        return;
+      }
+
       const result = await kbApi.createDocument({
         text,
         metadata,
@@ -42,10 +65,10 @@ export default function IngestPage() {
       setFeedback(`${t("ingest.addDocument")}. ID: ${result.id}`);
       setImage(null);
       setVideo(null);
-      await refreshStats();
+      setLoading(false);
+      void refreshStats();
     } catch (err) {
       setFeedback(err instanceof Error ? err.message : "Import failed");
-    } finally {
       setLoading(false);
     }
   };
@@ -54,6 +77,12 @@ export default function IngestPage() {
     setLoading(true);
     setFeedback(null);
     try {
+      const ready = await ensureReady();
+      if (!ready) {
+        setLoading(false);
+        return;
+      }
+
       const result = await kbApi.createBatchDocuments({
         files,
         common_text: commonText,
@@ -65,10 +94,10 @@ export default function IngestPage() {
       });
       setFeedback(`${t("ingest.runBatch")}. ${result.count}`);
       setFiles([]);
-      await refreshStats();
+      setLoading(false);
+      void refreshStats();
     } catch (err) {
       setFeedback(err instanceof Error ? err.message : "Batch import failed");
-    } finally {
       setLoading(false);
     }
   };
@@ -154,7 +183,10 @@ export default function IngestPage() {
                 {t("ingest.skipDuplicate")}
               </label>
             </div>
-            <Button onClick={() => void submitSingle()} disabled={loading || !status.ready}>
+            {!status.ready ? (
+              <p className="text-sm text-amber-600 dark:text-amber-400">{t("ingest.initRequired")}</p>
+            ) : null}
+            <Button onClick={() => void submitSingle()} disabled={loading}>
               {loading ? t("ingest.submitting") : t("ingest.addDocument")}
             </Button>
           </ComponentCard>
@@ -204,7 +236,10 @@ export default function IngestPage() {
                 ? t("ingest.noFiles")
                 : `${files.length} files selected: ${files.map((file) => file.name).join(", ")}`}
             </div>
-            <Button onClick={() => void submitBatch()} disabled={loading || !status.ready || files.length === 0}>
+            {!status.ready ? (
+              <p className="text-sm text-amber-600 dark:text-amber-400">{t("ingest.initRequired")}</p>
+            ) : null}
+            <Button onClick={() => void submitBatch()} disabled={loading || files.length === 0}>
               {loading ? t("ingest.importing") : t("ingest.runBatch")}
             </Button>
           </ComponentCard>

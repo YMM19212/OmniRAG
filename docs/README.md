@@ -6,6 +6,7 @@ OmniRAG is a professional multimodal retrieval workspace for building, operating
 
 It combines a modern web console, a Python API layer, and a Milvus-backed retrieval engine into a local-first system for multimodal ingestion, semantic search, hybrid search, and record management.
 
+
 ## Quick Start
 
 ### 1. Clone the repository
@@ -79,6 +80,32 @@ Open:
 - API: `http://127.0.0.1:8000`
 - Health check: `http://127.0.0.1:8000/api/health`
 
+## Interface Overview
+
+### Homepage
+
+The homepage summarizes system status, collection statistics, and recently accessed records so you can quickly confirm whether the workspace is connected and ready.
+
+![OmniRAG homepage](./docs_images/homepage.png)
+
+### Configuration
+
+The configuration page is used to initialize the knowledge base, switch between Milvus Lite and standalone Milvus, and adjust embedding and deduplication settings.
+
+![OmniRAG configuration page](./docs_images/config.png)
+
+### Ingestion
+
+The ingestion page supports single-item and batch imports for text, images, and videos, with options such as duplicate skipping and thumbnail extraction.
+
+![OmniRAG ingestion page](./docs_images/input.png)
+
+### Retrieval
+
+The retrieval page supports text, image, and video queries, plus modality filters and similarity thresholds for semantic search and result inspection.
+
+![OmniRAG retrieval page](./docs_images/retrieval.png)
+
 ## Why OmniRAG
 
 Most multimodal RAG demos stop at a notebook or a simple chat interface. OmniRAG is designed as an operational surface:
@@ -93,6 +120,7 @@ Most multimodal RAG demos stop at a notebook or a simple chat interface. OmniRAG
 
 - Professional web console
 - English and Chinese language toggle
+- Homepage for runtime overview and collection health
 - Single-item and batch ingestion
 - Text, image, and video retrieval workflows
 - Hybrid search across modalities
