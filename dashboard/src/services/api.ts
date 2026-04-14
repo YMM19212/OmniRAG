@@ -6,6 +6,7 @@ import type {
   HybridSearchRequest,
   KBConfig,
   KBStatus,
+  ParquetImportPayload,
   SearchRequest,
   SearchResult,
 } from "../types/omnirag";
@@ -80,6 +81,21 @@ export const kbApi = {
     formData.append("skip_duplicate", String(payload.skip_duplicate ?? true));
     formData.append("max_concurrent", String(payload.max_concurrent ?? 4));
     return sendForm<{ ids: string[]; count: number }>("/kb/documents/batch", formData);
+  },
+  createParquetDocuments: (payload: ParquetImportPayload) => {
+    const formData = new FormData();
+    formData.append("parquet", payload.parquet);
+    if (payload.max_rows !== undefined) formData.append("max_rows", String(payload.max_rows));
+    formData.append("store_image_base64", String(Boolean(payload.store_image_base64)));
+    formData.append("skip_duplicate", String(payload.skip_duplicate ?? true));
+    formData.append("max_concurrent", String(payload.max_concurrent ?? 4));
+    return sendForm<{
+      ids: string[];
+      count: number;
+      parsed_rows: number;
+      failed_rows: number;
+      errors: string[];
+    }>("/kb/documents/parquet", formData);
   },
   search: (payload: SearchRequest, image?: File | null, video?: File | null) => {
     const formData = new FormData();

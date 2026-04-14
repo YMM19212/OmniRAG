@@ -1,9 +1,15 @@
+import ast
+import asyncio
 import json
 import mimetypes
+from io import BytesIO
 from contextlib import asynccontextmanager
 from pathlib import Path
 from tempfile import gettempdir
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+
+import aiohttp
+import pandas as pd
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -107,6 +113,133 @@ def parse_json_field(raw_value: Optional[str], default: Any) -> Any:
     if raw_value is None or not raw_value.strip():
         return default
     return json.loads(raw_value)
+
+
+def parse_structured_field(raw_value: Any, default: Any) -> Any:
+    if raw_value is None:
+        return default
+    if isinstance(raw_value, (dict, list)):
+        return raw_value
+    if not isinstance(raw_value, str):
+        return default
+
+    stripped = raw_value.strip()
+    if not stripped:
+        return default
+
+    for parser in (json.loads, ast.literal_eval):
+        try:
+            return parser(stripped)
+        except Exception:
+            continue
+    return default
+
+
+def parse_cap_seg_field(raw_value: Any) -> Tuple[Optional[str], List[str]]:
+    parsed = parse_structured_field(raw_value, {})
+    if not isinstance(parsed, dict):
+        return None, []
+
+    global_caption = parsed.get("global_caption")
+    local_captions = parsed.get("local_caption") or []
+    if isinstance(local_captions, str):
+        local_captions = [local_captions]
+    if not isinstance(local_captions, list):
+        local_captions = []
+
+    text = global_caption.strip() if isinstance(global_caption, str) and global_caption.strip() else None
+    cleaned_locals = [item.strip() for item in local_captions if isinstance(item, str) and item.strip()]
+    return text, cleaned_locals
+
+
+async def download_binary(session: aiohttp.ClientSession, url: str) -> bytes:
+    async with session.get(url) as response:
+        response.raise_for_status()
+        return await response.read()
+
+
+def build_parquet_metadata(
+    index: int,
+    source_url: str,
+    local_captions: List[str],
+    seg_info: Any,
+    source_file: str,
+) -> Dict[str, Any]:
+    metadata: Dict[str, Any] = {
+        "source": "parquet_dataset",
+        "source_row_index": index,
+        "source_url": source_url,
+        "source_file": source_file,
+    }
+    if local_captions:
+        metadata["local_captions"] = local_captions
+    if seg_info is not None:
+        metadata["seg_info"] = seg_info
+    return metadata
+
+
+async def import_parquet_records(
+    parquet_name: str,
+    parquet_bytes: bytes,
+    max_rows: Optional[int],
+    max_concurrent: int,
+    store_image_base64: bool,
+    skip_duplicate: bool,
+) -> Tuple[List[str], int, List[str]]:
+    dataframe = pd.read_parquet(BytesIO(parquet_bytes))
+    candidates: List[Tuple[int, str, str, List[str], Any]] = []
+
+    for index, row in dataframe.iterrows():
+        text, local_captions = parse_cap_seg_field(row.get("cap_seg"))
+        url = row.get("url")
+        if not text or not isinstance(url, str) or not url.strip():
+            continue
+
+        seg_info = parse_structured_field(row.get("seg_info"), None)
+        candidates.append((index, url.strip(), text, local_captions, seg_info))
+        if max_rows is not None and len(candidates) >= max_rows:
+            break
+
+    if not candidates:
+        raise ValueError("没有从 parquet 中解析到可导入的图文对。")
+
+    semaphore = asyncio.Semaphore(max(1, max_concurrent))
+    timeout = aiohttp.ClientTimeout(total=120, connect=20)
+    errors: List[str] = []
+    documents: List[Dict[str, Any]] = []
+
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async def process_one(record: Tuple[int, str, str, List[str], Any]):
+            index, url, text, local_captions, seg_info = record
+            async with semaphore:
+                try:
+                    content = await download_binary(session, url)
+                    image_path = save_binary_file(Path(url).name or f"row_{index}.bin", content, "images")
+                    documents.append(
+                        {
+                            "text": text,
+                            "image_path": image_path,
+                            "metadata": build_parquet_metadata(
+                                index=index,
+                                source_url=url,
+                                local_captions=local_captions,
+                                seg_info=seg_info,
+                                source_file=parquet_name,
+                            ),
+                            "store_image_base64": store_image_base64,
+                            "extract_thumbnail": False,
+                            "skip_duplicate": skip_duplicate,
+                        }
+                    )
+                except Exception as exc:
+                    errors.append(f"row {index}: {exc}")
+
+        await asyncio.gather(*[process_one(record) for record in candidates])
+
+    if not documents:
+        raise ValueError("parquet 中的样本未能成功下载图片，请检查 URL 是否可访问。")
+
+    return get_client().add_documents_batch(documents, max_concurrent=max(1, max_concurrent)), len(candidates), errors
 
 
 def resolve_media_path(raw_path: str) -> Path:
@@ -265,6 +398,44 @@ async def create_documents_batch(
         return ok({"ids": ids, "count": len(ids)}, "Batch import completed.")
     except Exception as exc:
         return fail("Failed to batch import documents.", str(exc))
+
+
+@app.post("/api/kb/documents/parquet")
+async def create_documents_from_parquet(
+    parquet: UploadFile = File(...),
+    max_rows: Optional[int] = Form(default=None),
+    store_image_base64: bool = Form(default=False),
+    skip_duplicate: bool = Form(default=True),
+    max_concurrent: int = Form(default=4),
+):
+    client = get_client()
+    try:
+        if not parquet.filename or not parquet.filename.lower().endswith(".parquet"):
+            raise ValueError("请上传 .parquet 文件。")
+
+        if not client.is_ready:
+            raise RuntimeError("知识库尚未初始化，请先在设置页完成初始化。")
+        content = await parquet.read()
+        ids, parsed_rows, errors = await import_parquet_records(
+            parquet_name=parquet.filename,
+            parquet_bytes=content,
+            max_rows=max_rows,
+            max_concurrent=max_concurrent,
+            store_image_base64=store_image_base64,
+            skip_duplicate=skip_duplicate,
+        )
+        return ok(
+            {
+                "ids": ids,
+                "count": len(ids),
+                "parsed_rows": parsed_rows,
+                "failed_rows": len(errors),
+                "errors": errors[:20],
+            },
+            "Parquet import completed.",
+        )
+    except Exception as exc:
+        return fail("Failed to import parquet dataset.", str(exc))
 
 
 @app.post("/api/kb/search")

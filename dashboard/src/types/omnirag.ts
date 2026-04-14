@@ -81,3 +81,11 @@ export interface BatchDocumentPayload {
   skip_duplicate?: boolean;
   max_concurrent?: number;
 }
+
+export interface ParquetImportPayload {
+  parquet: File;
+  max_rows?: number;
+  store_image_base64?: boolean;
+  skip_duplicate?: boolean;
+  max_concurrent?: number;
+}

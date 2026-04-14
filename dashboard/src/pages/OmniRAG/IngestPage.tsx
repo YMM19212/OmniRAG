@@ -23,6 +23,8 @@ export default function IngestPage() {
   const [commonText, setCommonText] = useState("");
   const [batchMetadata, setBatchMetadata] = useState("{}");
   const [maxConcurrent, setMaxConcurrent] = useState(4);
+  const [parquetFile, setParquetFile] = useState<File | null>(null);
+  const [parquetMaxRows, setParquetMaxRows] = useState(100);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -98,6 +100,40 @@ export default function IngestPage() {
       void refreshStats();
     } catch (err) {
       setFeedback(err instanceof Error ? err.message : "Batch import failed");
+      setLoading(false);
+    }
+  };
+
+  const submitParquet = async () => {
+    if (!parquetFile) return;
+
+    setLoading(true);
+    setFeedback(null);
+    try {
+      const ready = await ensureReady();
+      if (!ready) {
+        setLoading(false);
+        return;
+      }
+
+      const result = await kbApi.createParquetDocuments({
+        parquet: parquetFile,
+        max_rows: parquetMaxRows > 0 ? parquetMaxRows : undefined,
+        store_image_base64: storeImageBase64,
+        skip_duplicate: skipDuplicate,
+        max_concurrent: maxConcurrent,
+      });
+      const summary = `${t("ingest.parquetSuccess")}. ${result.count}/${result.parsed_rows}`;
+      const errorDetail =
+        result.failed_rows > 0 && result.errors.length > 0
+          ? ` Failed: ${result.failed_rows}. ${result.errors.slice(0, 3).join(" | ")}`
+          : "";
+      setFeedback(`${summary}${errorDetail}`);
+      setParquetFile(null);
+      setLoading(false);
+      void refreshStats();
+    } catch (err) {
+      setFeedback(err instanceof Error ? err.message : "Parquet import failed");
       setLoading(false);
     }
   };
@@ -241,6 +277,38 @@ export default function IngestPage() {
             ) : null}
             <Button onClick={() => void submitBatch()} disabled={loading || files.length === 0}>
               {loading ? t("ingest.importing") : t("ingest.runBatch")}
+            </Button>
+          </ComponentCard>
+
+          <ComponentCard title={t("ingest.parquet")} desc={t("ingest.parquetDesc")}>
+            <label className="space-y-2">
+              <span className="text-sm text-gray-700 dark:text-gray-300">{t("ingest.parquetFile")}</span>
+              <input
+                type="file"
+                accept=".parquet"
+                onChange={(e) => setParquetFile(e.target.files?.[0] ?? null)}
+                className="w-full text-sm text-gray-500"
+              />
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm text-gray-700 dark:text-gray-300">{t("ingest.parquetLimit")}</span>
+              <input
+                type="number"
+                value={parquetMaxRows}
+                min={1}
+                onChange={(e) => setParquetMaxRows(Number(e.target.value))}
+                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900"
+              />
+            </label>
+            <div className="rounded-xl bg-gray-50 p-4 text-sm text-gray-700 dark:bg-gray-800/70 dark:text-gray-300">
+              {t("ingest.parquetHint")}
+              {parquetFile ? ` Selected: ${parquetFile.name}` : ""}
+            </div>
+            {!status.ready ? (
+              <p className="text-sm text-amber-600 dark:text-amber-400">{t("ingest.initRequired")}</p>
+            ) : null}
+            <Button onClick={() => void submitParquet()} disabled={loading || !parquetFile}>
+              {loading ? t("ingest.importing") : t("ingest.parquetRun")}
             </Button>
           </ComponentCard>
         </div>
